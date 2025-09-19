@@ -1,1 +1,1 @@
-# learn-typing
+learn-typing skills
