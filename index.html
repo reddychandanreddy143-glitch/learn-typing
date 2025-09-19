@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Learn Typing</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='90' font-size='90' fill='%236366f1' font-family='sans-serif' font-weight='bold'%3ELT%3C/text%3E%3C/svg%3E">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -98,10 +99,50 @@
             background-color: #4338ca;
             transform: translateY(-2px);
         }
+        .logo-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 2rem;
+        }
+        .logo-lt {
+            font-size: 4rem;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(45deg, #6366f1, #4338ca);
+            color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 8px 20px rgba(99, 102, 241, 0.5);
+            position: relative;
+            transform: rotate(-10deg);
+        }
+        .logo-lt::before {
+            content: 'L';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-60%, -50%) rotate(10deg);
+        }
+        .logo-lt::after {
+            content: 'T';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-10%, -50%) rotate(10deg);
+        }
+        h1 {
+            display: none; /* Hide the h1 since the logo is the title */
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen">
     <div class="container">
+        <div class="logo-container">
+            <div class="logo-lt"></div>
+        </div>
         <h1 class="text-4xl font-bold text-center mb-6 text-gray-800">Learn Typing</h1>
         <div class="text-section text-lg md:text-xl">
             <span id="target-text">Loading...</span>
@@ -247,10 +288,37 @@
         function updateStats() {
             if (totalCount > 0) {
                 const accuracy = (correctCount / totalCount) * 100;
-                accuracyDisplayEl.textContent = ${accuracy.toFixed(0)}%;
+                accuracyDisplayEl.textContent = `${accuracy.toFixed(0)}%`;
             } else {
                 accuracyDisplayEl.textContent = '0%';
             }
+        }
+
+        // A new function to handle all text rendering logic
+        function renderText() {
+            targetTextEl.innerHTML = ''; // Clear the existing content
+            const typedText = typingInputEl.value;
+            correctCount = 0;
+
+            for (let i = 0; i < currentText.length; i++) {
+                const targetChar = currentText[i];
+                const charSpan = document.createElement('span');
+                charSpan.textContent = targetChar;
+
+                if (i < typedText.length) {
+                    const typedChar = typedText[i];
+                    if (typedChar === targetChar) {
+                        charSpan.classList.add('correct');
+                        correctCount++;
+                    } else {
+                        charSpan.classList.add('incorrect');
+                    }
+                }
+                targetTextEl.appendChild(charSpan);
+            }
+
+            totalCount = typedText.length;
+            updateStats();
         }
 
         typingInputEl.addEventListener('input', (e) => {
@@ -259,27 +327,7 @@
                 isTyping = true;
                 intervalId = setInterval(calculateWPM, 1000);
             }
-
-            const typedText = e.target.value;
-            const targetChars = targetTextEl.querySelectorAll('span');
-            correctCount = 0;
-            totalCount = typedText.length;
-
-            targetChars.forEach((charSpan, index) => {
-                const typedChar = typedText[index];
-                if (typedChar == null) {
-                    charSpan.classList.remove('correct', 'incorrect');
-                } else if (typedChar === charSpan.textContent) {
-                    charSpan.classList.add('correct');
-                    charSpan.classList.remove('incorrect');
-                    correctCount++;
-                } else {
-                    charSpan.classList.add('incorrect');
-                    charSpan.classList.remove('correct');
-                }
-            });
-
-            updateStats();
+            renderText();
         });
 
         // Event listener for the Enter key
