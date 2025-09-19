@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Learn Typing</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            color: #334155;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 1rem;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background-color: #ffffff;
+            border-radius: 1.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            position: relative;
+        }
+        .text-section {
+            background-color: #e2e8f0;
+            padding: 2rem;
+            border-radius: 1rem;
+            min-height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            line-height: 2.25rem;
+            font-size: 1.5rem;
+            text-align: left;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+            border: 2px solid transparent;
+        }
+        .input-section {
+            margin-top: 1.5rem;
+        }
+        #typing-input {
+            width: 100%;
+            padding: 1rem 1.5rem;
+            font-size: 1.5rem;
+            border-radius: 0.75rem;
+            border: 2px solid #cbd5e1;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+        #typing-input:focus {
+            outline: none;
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.5);
+        }
+        .stats-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 1.5rem;
+            padding: 1rem;
+            background-color: #f8fafc;
+            border-radius: 1rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+        .correct {
+            color: #16a34a; /* green-600 */
+        }
+        .incorrect {
+            color: #ef4444; /* red-500 */
+            text-decoration: underline;
+        }
+        .control-buttons {
+            position: absolute;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            display: flex;
+            gap: 1rem;
+        }
+        .control-buttons button {
+            background-color: #6366f1;
+            color: #ffffff;
+            font-weight: bold;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.75rem;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.1s;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        }
+        .control-buttons button:hover:not(:disabled) {
+            background-color: #4338ca;
+            transform: translateY(-2px);
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+    <div class="container">
+        <h1 class="text-4xl font-bold text-center mb-6 text-gray-800">Learn Typing</h1>
+        <div class="text-section text-lg md:text-xl">
+            <span id="target-text">Loading...</span>
+        </div>
+        <div class="input-section">
+            <input type="text" id="typing-input" placeholder="Start typing here..." class="shadow-md focus:shadow-lg transition-shadow">
+        </div>
+        <div class="stats-section">
+            <div>WPM: <span id="wpm-display" class="font-extrabold text-blue-600">0</span></div>
+            <div>Accuracy: <span id="accuracy-display" class="font-extrabold text-blue-600">0%</span></div>
+        </div>
+        <div class="control-buttons">
+            <button id="reset-button">Reset</button>
+            <button id="next-button">Next</button>
+        </div>
+    </div>
+
+    <script>
+        // Server-side sentence data, categorized by difficulty
+        const sentenceData = {
+            easy: [
+                "This is a simple test.",
+                "The cat sat on the mat.",
+                "A dog ran to the park.",
+                "We love to type fast.",
+                "Practice makes perfect skills.",
+                "The sun is so very bright today.",
+                "Hello world, welcome to my app.",
+                "Jump and fly over the hill.",
+                "The big fox ran in the yard.",
+                "Go to the store and get bread.",
+                "I like to read books."
+            ],
+            medium: [
+                "The quick brown fox jumps over the lazy dog.",
+                "A journey of a thousand miles begins with a single step.",
+                "The early bird catches the worm.",
+                "Technology is best when it brings people together.",
+                "The computer is a canvas for creativity.",
+                "Innovation distinguishes between a leader and a follower.",
+                "Software is a great combination of artistry and engineering.",
+                "The brave knight fought the dragon.",
+                "A stitch in time saves nine.",
+                "He was a silent but deep thinker."
+            ],
+            hard: [
+                "Perseverance is not a long race; it is many short races one after the other.",
+                "Excellence is not a skill. It is an attitude.",
+                "Believe you can and you're halfway there.",
+                "The only impossible journey is the one you never begin.",
+                "The journey of a thousand leagues begins with a single step.",
+                "Do not go where the path may lead, go instead where there is no path and leave a trail.",
+                "The future belongs to those who believe in the beauty of their dreams.",
+                "You are never too old to set another goal or to dream a new dream."
+            ]
+        };
+
+        const sentencesTyped = [];
+        const levels = ["easy", "medium", "hard"];
+        let currentLevelIndex = 0;
+        let sentencesCompletedThisLevel = 0;
+        const sentencesPerLevel = 5;
+
+        let correctCount = 0;
+        let totalCount = 0;
+        let startTime = null;
+        let intervalId = null;
+        let isTyping = false;
+        let currentText = '';
+
+        const targetTextEl = document.getElementById('target-text');
+        const typingInputEl = document.getElementById('typing-input');
+        const wpmDisplayEl = document.getElementById('wpm-display');
+        const accuracyDisplayEl = document.getElementById('accuracy-display');
+        const resetButtonEl = document.getElementById('reset-button');
+        const nextButtonEl = document.getElementById('next-button');
+
+        function fetchSentenceFromServer() {
+            // Simulate a server request with a delay
+            return new Promise(resolve => {
+                const currentLevel = levels[currentLevelIndex];
+                const availableSentences = sentenceData[currentLevel].filter(s => !sentencesTyped.includes(s));
+                
+                if (availableSentences.length === 0) {
+                    // Move to the next level or complete the app
+                    if (currentLevelIndex < levels.length - 1) {
+                        currentLevelIndex++;
+                        sentencesCompletedThisLevel = 0;
+                        resolve(fetchSentenceFromServer());
+                    } else {
+                        resolve(null); // No more sentences
+                    }
+                } else {
+                    const randomIndex = Math.floor(Math.random() * availableSentences.length);
+                    const sentence = availableSentences[randomIndex];
+                    sentencesTyped.push(sentence);
+                    resolve(sentence);
+                }
+            });
+        }
+
+        async function loadNewText() {
+            targetTextEl.innerHTML = "Loading...";
+            typingInputEl.disabled = true;
+
+            const newText = await fetchSentenceFromServer();
+            
+            if (newText === null) {
+                targetTextEl.innerHTML = "Congratulations! You've completed all lessons.";
+                typingInputEl.disabled = true;
+                typingInputEl.value = "";
+                clearInterval(intervalId);
+                resetButtonEl.disabled = true;
+                nextButtonEl.disabled = true;
+                return;
+            }
+
+            currentText = newText;
+            targetTextEl.innerHTML = '';
+            currentText.split('').forEach(char => {
+                const span = document.createElement('span');
+                span.textContent = char;
+                targetTextEl.appendChild(span);
+            });
+            typingInputEl.value = '';
+            typingInputEl.disabled = false;
+            correctCount = 0;
+            totalCount = 0;
+            startTime = null;
+            isTyping = false;
+            updateStats();
+            typingInputEl.focus();
+        }
+
+        function calculateWPM() {
+            const currentTime = new Date().getTime();
+            const elapsedTimeInMinutes = (currentTime - startTime) / 60000;
+            const charactersTyped = typingInputEl.value.length;
+            const wpm = Math.round((charactersTyped / 5) / elapsedTimeInMinutes);
+            wpmDisplayEl.textContent = wpm || 0;
+        }
+
+        function updateStats() {
+            if (totalCount > 0) {
+                const accuracy = (correctCount / totalCount) * 100;
+                accuracyDisplayEl.textContent = ${accuracy.toFixed(0)}%;
+            } else {
+                accuracyDisplayEl.textContent = '0%';
+            }
+        }
+
+        typingInputEl.addEventListener('input', (e) => {
+            if (!isTyping) {
+                startTime = new Date().getTime();
+                isTyping = true;
+                intervalId = setInterval(calculateWPM, 1000);
+            }
+
+            const typedText = e.target.value;
+            const targetChars = targetTextEl.querySelectorAll('span');
+            correctCount = 0;
+            totalCount = typedText.length;
+
+            targetChars.forEach((charSpan, index) => {
+                const typedChar = typedText[index];
+                if (typedChar == null) {
+                    charSpan.classList.remove('correct', 'incorrect');
+                } else if (typedChar === charSpan.textContent) {
+                    charSpan.classList.add('correct');
+                    charSpan.classList.remove('incorrect');
+                    correctCount++;
+                } else {
+                    charSpan.classList.add('incorrect');
+                    charSpan.classList.remove('correct');
+                }
+            });
+
+            updateStats();
+        });
+
+        // Event listener for the Enter key
+        typingInputEl.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault(); // Prevents a new line from being created in a text area
+                sentencesCompletedThisLevel++;
+                if (sentencesCompletedThisLevel >= sentencesPerLevel && currentLevelIndex < levels.length - 1) {
+                    currentLevelIndex++;
+                    sentencesCompletedThisLevel = 0;
+                }
+                loadNewText();
+            }
+        });
+
+        resetButtonEl.addEventListener('click', () => {
+            loadNewText();
+        });
+
+        nextButtonEl.addEventListener('click', () => {
+            sentencesCompletedThisLevel++;
+            if (sentencesCompletedThisLevel >= sentencesPerLevel && currentLevelIndex < levels.length - 1) {
+                currentLevelIndex++;
+                sentencesCompletedThisLevel = 0;
+            }
+            loadNewText();
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadNewText();
+        });
+    </script>
+</body>
+</html>
